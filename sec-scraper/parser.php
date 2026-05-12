@@ -1141,6 +1141,26 @@ $aParties = [
     'deal_parties' => []
 ];
 
+	// Build the party denylist once per PHP execution.
+	static $aPartyDenyList = null;
+	if ($aPartyDenyList === null)
+	{
+		$aBuiltInDeny = array(
+			'depository trust company',
+			'the depository trust company',
+			'dtc',
+			'transfer agent',
+			'securities and exchange commission',
+			'the securities and exchange commission',
+			'internal revenue service',
+			'federal reserve',
+		);
+		$aOptionDeny = function_exists('get_option')
+			? array_filter(array_map('trim', preg_split('/\r?\n/', get_option('sec_scraper_party_negatives', ''))))
+			: array();
+		$aPartyDenyList = array_map('strtolower', array_merge($aBuiltInDeny, $aOptionDeny));
+	}
+
 	if (preg_match_all(PARTIES_PATTERN, $sCleanContent, $aMatches, PREG_SET_ORDER))
 	{
 		// Remove double space & trim for each law firm name.
@@ -1164,6 +1184,26 @@ $aParties = [
 			}
 
 			$sName = stripExcessiveSpaces($sName);
+
+			// Strip leading section/list number prefixes (e.g., "10.", "2.", "2.2.", "10.18.").
+			$sName = preg_replace('/^\d+(?:\.\d+)*\.?\s*/', '', $sName);
+			$sName = trim($sName);
+
+			// Skip empty names.
+			if (!strlen($sName)) continue;
+
+			// Skip names that start with a lowercase letter.
+			if (preg_match('/^[a-z]/', $sName)) continue;
+
+			// Skip single-word names (bare suffix word like "Company" with nothing before it).
+			if (strpos($sName, ' ') === false) continue;
+
+			// Skip names with an embedded sentence-like period (e.g., "Voluntary Agreement. Company").
+			// Two or more lowercase chars before ". " indicates a word boundary, not an abbreviation.
+			if (preg_match('/[a-z]{2,}\.\s/', $sName)) continue;
+
+			// Skip names that appear on the denylist.
+			if (in_array(strtolower($sName), $aPartyDenyList)) continue;
 
 			if (preg_match(NAMES_PATTERN, $aVal[2])) $aCompanies[] = $sName;
 

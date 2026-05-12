@@ -63,6 +63,7 @@ function settings_page_contents(){
 	if(isset($_POST['save'])){
 		update_option('sec_scraper_positives', $_POST['positives']);
 		update_option('sec_scraper_negatives', $_POST['negatives']);
+		update_option('sec_scraper_party_negatives', $_POST['party_negatives']);
 	}
 	
 	/*
@@ -127,6 +128,10 @@ function settings_page_contents(){
 			<br><br>
 			<label>Negative Terms: - Ask Dan before editing </label><br>
 			<textarea style="min-width: 500px;min-height:200px;" name="negatives"><?php echo get_option('sec_scraper_negatives')?></textarea>
+			<br><br>
+			<label>Party Negative Terms (one name per line, case-insensitive): </label><br>
+			<p style="margin-top:4px;color:#555;">Names entered here will never appear in the Parties list. Built-in exclusions already include: Depository Trust Company, Securities and Exchange Commission, Internal Revenue Service, Transfer Agent, Federal Reserve.</p>
+			<textarea style="min-width: 500px;min-height:150px;" name="party_negatives"><?php echo esc_textarea(get_option('sec_scraper_party_negatives'))?></textarea>
 			<br><br>
 			<button name="save" value="1" class="button">Save</button>
 		</form>
