@@ -50,13 +50,17 @@ function settings_page_contents(){
 	}
 	
 	if(isset($_POST['adhoc'])){
-		$data = adhoc_scrape($_POST['custom_url']);
-		if(count($data) && isset($data[0]) && isset($data[0]['cik_number'])){
-			$cik_number = $data[0]['cik_number'];
-		}
-		set_exhibits_to_db($data);
-		if(isset($cik_number)){
-			get_exhibit_html($cik_number);
+		try {
+			$data = adhoc_scrape($_POST['custom_url']);
+			if(count($data) && isset($data[0]) && isset($data[0]['cik_number'])){
+				$cik_number = $data[0]['cik_number'];
+			}
+			set_exhibits_to_db($data);
+			if(isset($cik_number)){
+				get_exhibit_html($cik_number);
+			}
+		} catch (Exception $e) {
+			echo '<div class="notice notice-error"><p>Error: ' . esc_html($e->getMessage()) . '</p></div>';
 		}
 	}
 	
@@ -226,7 +230,17 @@ function adhoc_scrape($url){
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_USERAGENT, "MRN Capital info@mrncapital.com");
 	$html = curl_exec($ch);
+	$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	$curl_error = curl_error($ch);
 	curl_close($ch);
+
+	if ($html === false || empty($html)) {
+		throw new Exception('Failed to fetch URL: ' . ($curl_error ?: 'empty response'));
+	}
+	if ($http_code !== 200) {
+		throw new Exception('HTTP error ' . $http_code . ' fetching URL');
+	}
+
 	$dom = new DOMDocument;
 	libxml_use_internal_errors(true);
 	$dom->loadHTML($html);
